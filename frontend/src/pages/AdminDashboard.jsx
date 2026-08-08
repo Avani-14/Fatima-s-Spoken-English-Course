@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  LogOut, Plus, Pencil, Trash2, GraduationCap, Users, BookOpen, Loader2, X, MailCheck,
+  LogOut, Plus, Pencil, Trash2, GraduationCap, Users, BookOpen, Loader2, X, MailCheck, UserX,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, formatApiErrorDetail } from "../lib/api";
@@ -48,6 +48,8 @@ export default function AdminDashboard() {
   const [draft, setDraft] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [enrolDelete, setEnrolDelete] = useState(null);
+  const [resetOpen, setResetOpen] = useState(false);
 
   // enrolment filters
   const [courseFilter, setCourseFilter] = useState("all");
@@ -121,6 +123,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const doDeleteEnrol = async () => {
+    if (!enrolDelete) return;
+    try {
+      await api.delete(`/admin/enrolments/${enrolDelete.id}`);
+      toast.success("Enrolment deleted");
+      setEnrolments((prev) => prev.filter((x) => x.id !== enrolDelete.id));
+      setEnrolDelete(null);
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
+    }
+  };
+
+  const doResetAdmin = async () => {
+    try {
+      await api.delete("/auth/account");
+      toast.success("Admin account removed. Signup is open again.");
+      logout();
+      navigate("/admin/signup");
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
+    }
+  };
+
   const toggleActive = async (c) => {
     try {
       await api.put(`/admin/courses/${c.id}`, { ...c, active: !c.active });
@@ -172,13 +197,22 @@ export default function AdminDashboard() {
             </span>
             <span className="font-heading font-bold text-base sm:text-lg">Admin · Fatima's Centre</span>
           </div>
-          <button
-            data-testid="logout-btn"
-            onClick={() => { logout(); navigate("/admin/login"); }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted"
-          >
-            <LogOut size={16} /> Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              data-testid="reset-admin-btn"
+              onClick={() => setResetOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <UserX size={16} /> <span className="hidden sm:inline">Reset account</span>
+            </button>
+            <button
+              data-testid="logout-btn"
+              onClick={() => { logout(); navigate("/admin/login"); }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted"
+            >
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -270,17 +304,27 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
-                            {e.status === "accepted" ? (
-                              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><MailCheck size={15} /> Emailed</span>
-                            ) : (
+                            <div className="inline-flex items-center gap-2 justify-end">
+                              {e.status === "accepted" ? (
+                                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><MailCheck size={15} /> Emailed</span>
+                              ) : (
+                                <button
+                                  data-testid={`accept-enrolment-${e.id}`}
+                                  onClick={() => acceptEnrolment(e)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-[0.98]"
+                                >
+                                  <MailCheck size={15} /> Accept
+                                </button>
+                              )}
                               <button
-                                data-testid={`accept-enrolment-${e.id}`}
-                                onClick={() => acceptEnrolment(e)}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-[0.98]"
+                                data-testid={`delete-enrolment-${e.id}`}
+                                onClick={() => setEnrolDelete(e)}
+                                title="Delete enrolment"
+                                className="inline-flex items-center rounded-lg border border-border p-1.5 text-destructive transition-colors hover:bg-destructive/10"
                               >
-                                <MailCheck size={15} /> Accept
+                                <Trash2 size={15} />
                               </button>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -405,6 +449,43 @@ export default function AdminDashboard() {
             <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction data-testid="confirm-delete-btn" onClick={doDelete} className="rounded-xl bg-destructive hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete enrolment confirm */}
+      <AlertDialog open={!!enrolDelete} onOpenChange={(o) => !o && setEnrolDelete(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Delete this enrolment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {enrolDelete?.name}'s enrolment will be permanently removed from your records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction data-testid="confirm-delete-enrolment-btn" onClick={doDeleteEnrol} className="rounded-xl bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset admin account confirm */}
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">Reset admin account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes your admin login and logs you out. Signup will re-open so a new
+              admin can be created. Your courses and enrolments are NOT affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction data-testid="confirm-reset-admin-btn" onClick={doResetAdmin} className="rounded-xl bg-destructive hover:bg-destructive/90">
+              Delete my admin account
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

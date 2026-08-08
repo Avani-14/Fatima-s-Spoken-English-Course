@@ -307,6 +307,12 @@ async def me(admin: dict = Depends(get_current_admin)):
     return {"email": admin["email"], "name": admin.get("name", "Admin")}
 
 
+@api_router.delete("/auth/account")
+async def delete_account(admin: dict = Depends(get_current_admin)):
+    await db.admin_users.delete_one({"id": admin["id"]})
+    return {"status": "deleted", "message": "Admin account removed. Signup is now open again."}
+
+
 # ---------------- Public Course Routes ----------------
 @api_router.get("/courses")
 async def public_courses():
@@ -468,6 +474,14 @@ async def accept_enrolment(enrolment_id: str, admin: dict = Depends(get_current_
         {"$set": {"status": "accepted", "accepted_at": now_utc().isoformat()}},
     )
     return {"status": "accepted", "message": f"Confirmation email sent to {e['email']}"}
+
+
+@api_router.delete("/admin/enrolments/{enrolment_id}")
+async def delete_enrolment(enrolment_id: str, admin: dict = Depends(get_current_admin)):
+    res = await db.enrolments.delete_one({"id": enrolment_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Enrolment not found")
+    return {"status": "deleted"}
 
 
 # ---------------- Startup ----------------
