@@ -1,0 +1,27 @@
+{
+  "summary": "E2E testing of new iteration (self-signup, seat limits, accept flow) for Fatima's Spoken English Centre. Backend: 29/29 pytest tests pass covering auth status/signup/second-signup-403/login/me, admin protection, course CRUD, seats validation, full seat-limit flow (seats=1 -> enrol -> auto-hide from /api/courses -> further send-otp returns 400 'batch is full'), accept flow (200+status=accepted+idempotent already-confirmed+404 on unknown id+401 without bearer), and enrolment/OTP validation regression. Frontend: /admin/signup shows create-account form when no admin exists and successfully signs Fatima up with redirect to /admin; token stored in fsec_token; after admin exists /admin/signup shows admin-exists-msg with go-to-login link (form hidden). Home shows spots-left badges for all 3 seeded courses (data-testid spots-left-{id}). Admin dashboard: Enrolments tab shows Status column + Accept button (accept-enrolment-{id}); clicking Accept flipped Pending -> Confirmed and rendered the 'Emailed' indicator; Courses tab shows seats-info-{id} 'X/Y filled · Z left' on all cards and the Add-course dialog exposes course-seats-input with default value 30.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: pytest.ini forces `-n 2 --dist loadscope`; the backend_test.py fixture is race-safe against the single-admin signup, but any future test file that also hits /auth/signup could collide. Consider `serial` marker or single-worker for this module.",
+    "Optional: /api/admin/enrolments/{id}/accept currently returns 200 (not 401) with idempotent 'already confirmed' — spec matches; leaving as-is."
+  ],
+  "critical_code_review_comments": [
+    "server.py still uses deprecated @app.on_event('startup'); should migrate to lifespan.",
+    "ADMIN_EMAIL/ADMIN_PASSWORD env vars are still read at import time but no longer used anywhere (self-signup replaced seed) — dead config, safe to remove.",
+    "CORS_ORIGINS='*' with allow_credentials=True — browsers will reject credentialed requests. Frontend uses Bearer, not cookies, so not blocking today, but flag if cookies are ever added.",
+    "verify_otp does not clear otp_codes on max attempts (5) — record lingers until 10min expiry."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (29/29)", "frontend": "100% (all critical flows: signup, admin-exists redirect, spots-left badges, accept flow, seats-info, course-seats-input)"},
+  "test_credentials": "Fatima / fatima@fatimaenglish.com / Fatima@2026 (admin was signed up during test; DB now has this admin — main agent should clear admin_users at end of iteration as noted).",
+  "seed_data_creation": "Backend tests create+delete a seats=1 'TEST_Capped' course and one throwaway enrolment (test_...@resend.dev), plus one directly-inserted pending enrolment for the accept test — all cleaned up in session teardown. Existing 3 default courses + 1 seed enrolment (Avani Dewangan, Advanced) are preserved (Avani row was accepted during UI test as intended by the request note).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run backend: `python -m pytest /app/backend/tests/backend_test.py --tb=short` (pytest.ini forces -n 2 loadscope; token fixture is race-safe). Admin credentials: fatima@fatimaenglish.com / Fatima@2026. If tests are run on a fresh DB with no admin, the fixture signs up first automatically. The Avani enrolment currently has status=accepted after UI testing.",
+  "rca of the issue": "No issues found."
+}

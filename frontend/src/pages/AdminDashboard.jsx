@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  LogOut, Plus, Pencil, Trash2, GraduationCap, Users, BookOpen, Loader2, X,
+  LogOut, Plus, Pencil, Trash2, GraduationCap, Users, BookOpen, Loader2, X, MailCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, formatApiErrorDetail } from "../lib/api";
@@ -31,7 +31,7 @@ function fmtDateTime(d) {
   catch { return d; }
 }
 
-const EMPTY = { name: "", start_date: "", description: "", active: true };
+const EMPTY = { name: "", start_date: "", description: "", active: true, seats: 30 };
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
   const openNew = () => { setEditing(null); setDraft(EMPTY); setEditorOpen(true); };
   const openEdit = (c) => {
     setEditing(c);
-    setDraft({ name: c.name, start_date: c.start_date, description: c.description, active: c.active });
+    setDraft({ name: c.name, start_date: c.start_date, description: c.description, active: c.active, seats: c.seats });
     setEditorOpen(true);
   };
 
@@ -88,13 +88,18 @@ export default function AdminDashboard() {
       toast.error("Please fill all course fields");
       return;
     }
+    if (!draft.seats || Number(draft.seats) < 1) {
+      toast.error("Seats must be at least 1");
+      return;
+    }
     setSaving(true);
     try {
+      const body = { ...draft, seats: Number(draft.seats) };
       if (editing) {
-        await api.put(`/admin/courses/${editing.id}`, draft);
+        await api.put(`/admin/courses/${editing.id}`, body);
         toast.success("Course updated");
       } else {
-        await api.post("/admin/courses", draft);
+        await api.post("/admin/courses", body);
         toast.success("Course added");
       }
       setEditorOpen(false);
@@ -103,6 +108,16 @@ export default function AdminDashboard() {
       toast.error(formatApiErrorDetail(err.response?.data?.detail));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const acceptEnrolment = async (e) => {
+    try {
+      const res = await api.post(`/admin/enrolments/${e.id}/accept`);
+      toast.success(res.data.message || "Confirmation sent");
+      setEnrolments((prev) => prev.map((x) => (x.id === e.id ? { ...x, status: "accepted" } : x)));
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
     }
   };
 
@@ -235,6 +250,8 @@ export default function AdminDashboard() {
                         <th className="px-4 py-3 font-semibold">Email</th>
                         <th className="px-4 py-3 font-semibold">Course</th>
                         <th className="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
+                        <th className="px-4 py-3 font-semibold">Status</th>
+                        <th className="px-4 py-3 font-semibold text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -247,6 +264,24 @@ export default function AdminDashboard() {
                           <td className="px-4 py-3 whitespace-nowrap">{e.email}</td>
                           <td className="px-4 py-3 whitespace-nowrap">{e.course_name}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{fmtDateTime(e.created_at)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span data-testid={`status-${e.id}`} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${e.status === "accepted" ? "bg-secondary/60 text-secondary-foreground" : "bg-muted text-muted-foreground"}`}>
+                              {e.status === "accepted" ? "Confirmed" : "Pending"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-right">
+                            {e.status === "accepted" ? (
+                              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><MailCheck size={15} /> Emailed</span>
+                            ) : (
+                              <button
+                                data-testid={`accept-enrolment-${e.id}`}
+                                onClick={() => acceptEnrolment(e)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-[0.98]"
+                              >
+                                <MailCheck size={15} /> Accept
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -282,6 +317,9 @@ export default function AdminDashboard() {
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${c.active ? "bg-secondary/60 text-secondary-foreground" : "bg-muted text-muted-foreground"}`}>
                       {c.active ? "Active" : "Inactive"}
                     </span>
+                  </div>
+                  <div data-testid={`seats-info-${c.id}`} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
+                    <Users size={13} /> {c.enrolled}/{c.seats} filled · {c.spots_left} left
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground line-clamp-3">{c.description}</p>
                   <div className="mt-4 flex items-center justify-between">
@@ -324,6 +362,12 @@ export default function AdminDashboard() {
               <Label htmlFor="c-date">Start date</Label>
               <Input id="c-date" data-testid="course-date-input" type="date" className="h-11 rounded-xl mt-1.5"
                 value={draft.start_date} onChange={(e) => setDraft({ ...draft, start_date: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="c-seats">Total seats</Label>
+              <Input id="c-seats" data-testid="course-seats-input" type="number" min={1} className="h-11 rounded-xl mt-1.5"
+                value={draft.seats} onChange={(e) => setDraft({ ...draft, seats: e.target.value })} placeholder="e.g. 30" />
+              <p className="mt-1 text-xs text-muted-foreground">The batch auto-hides from the public site once all seats are filled.</p>
             </div>
             <div>
               <Label htmlFor="c-desc">Description</Label>

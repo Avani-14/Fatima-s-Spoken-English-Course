@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CalendarDays, ArrowRight, Phone, CheckCircle2 } from "lucide-react";
+import { CalendarDays, ArrowRight, Phone, CheckCircle2, Users } from "lucide-react";
 import { api } from "../lib/api";
 import { Header } from "../components/Header";
 
@@ -113,8 +113,16 @@ export default function Home() {
                 className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
               >
                 <h3 className="font-heading text-xl sm:text-2xl font-medium text-foreground">{c.name}</h3>
-                <div className="mt-2 inline-flex items-center gap-1.5 self-start rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
-                  <CalendarDays size={15} /> Starts {formatDate(c.start_date)}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
+                    <CalendarDays size={15} /> Starts {formatDate(c.start_date)}
+                  </div>
+                  <div
+                    data-testid={`spots-left-${c.id}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${c.spots_left <= 5 ? "bg-primary/10 text-primary" : "bg-secondary/60 text-secondary-foreground"}`}
+                  >
+                    <Users size={15} /> {c.spots_left} {c.spots_left === 1 ? "spot" : "spots"} left
+                  </div>
                 </div>
                 <p className="mt-4 text-base leading-relaxed text-muted-foreground flex-1">{c.description}</p>
                 <button

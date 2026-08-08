@@ -129,6 +129,45 @@ async def send_otp_email(recipient: str, code: str, name: str):
     resp.raise_for_status()
 
 
+async def send_confirmation_email(recipient: str, name: str, course_name: str):
+    html = f"""
+    <table width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif; background:#FDFBF7; padding:24px;">
+      <tr><td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff; border:1px solid #E5E1D8; border-radius:16px; overflow:hidden;">
+          <tr><td style="background:#D96C4E; padding:20px 28px;">
+            <span style="color:#ffffff; font-size:18px; font-weight:bold;">Fatima's Spoken English Centre</span>
+          </td></tr>
+          <tr><td style="padding:28px;">
+            <p style="color:#2D3047; font-size:16px; margin:0 0 12px;">Hi {name or 'there'},</p>
+            <p style="color:#2D3047; font-size:15px; margin:0 0 16px;">Great news — your spot in the
+              <strong>{course_name}</strong> course is <strong style="color:#D96C4E;">confirmed</strong>!</p>
+            <p style="color:#2D3047; font-size:15px; margin:0 0 16px;">We're excited to have you join us. You'll receive
+              the batch schedule and joining details shortly. If you have any questions, just reply to this email.</p>
+            <p style="color:#6B7280; font-size:13px; margin:16px 0 0;">See you in class,<br/>Fatima</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+    """
+    payload = {
+        "to": [recipient],
+        "subject": f"Your spot in {course_name} is confirmed!",
+        "html": html,
+        "from_name": EMAIL_FROM_NAME,
+    }
+    async with httpx.AsyncClient(timeout=30) as http_client:
+        resp = await http_client.post(
+            f"{EMAIL_BASE_URL}/api/v1/email/send",
+            headers={"X-Email-Key": EMAIL_KEY},
+            json=payload,
+        )
+    resp.raise_for_status()
+
+
+async def course_enrolled_count(course_id: str) -> int:
+    return await db.enrolments.count_documents({"course_id": course_id, "verified": True})
+
+
 # ---------------- Models ----------------
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -140,6 +179,7 @@ class CourseBase(BaseModel):
     start_date: str
     description: str
     active: bool = True
+    seats: int = 30
 
     @field_validator("name", "description", "start_date")
     @classmethod
@@ -147,6 +187,33 @@ class CourseBase(BaseModel):
         if not v or not str(v).strip():
             raise ValueError("This field cannot be blank")
         return v.strip()
+
+    @field_validator("seats")
+    @classmethod
+    def seats_valid(cls, v):
+        if v < 1:
+            raise ValueError("Seats must be at least 1")
+        return v
+
+
+class SignupRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+    @field_validator("name")
+    @classmethod
+    def name_ok(cls, v):
+        if not v or len(v.strip()) < 2:
+            raise ValueError("Please enter your name")
+        return v.strip()
+
+    @field_validator("password")
+    @classmethod
+    def pw_ok(cls, v):
+        if not v or len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
 
 
 class Course(CourseBase):
@@ -201,6 +268,30 @@ class VerifyOtpRequest(EnrolmentForm):
 
 
 # ---------------- Auth Routes ----------------
+@api_router.get("/auth/status")
+async def auth_status():
+    count = await db.admin_users.count_documents({})
+    return {"admin_exists": count > 0}
+
+
+@api_router.post("/auth/signup")
+async def signup(body: SignupRequest):
+    count = await db.admin_users.count_documents({})
+    if count > 0:
+        raise HTTPException(status_code=403, detail="An admin account already exists. Please log in.")
+    email = body.email.lower()
+    user = {
+        "id": str(uuid.uuid4()),
+        "email": email,
+        "password_hash": hash_password(body.password),
+        "name": body.name,
+        "created_at": now_utc().isoformat(),
+    }
+    await db.admin_users.insert_one(user)
+    token = create_access_token(user["id"], email)
+    return {"token": token, "user": {"email": email, "name": body.name}}
+
+
 @api_router.post("/auth/login")
 async def login(body: LoginRequest):
     email = body.email.lower()
@@ -217,16 +308,32 @@ async def me(admin: dict = Depends(get_current_admin)):
 
 
 # ---------------- Public Course Routes ----------------
-@api_router.get("/courses", response_model=List[Course])
+@api_router.get("/courses")
 async def public_courses():
     docs = await db.courses.find({"active": True}, {"_id": 0}).to_list(1000)
-    return docs
+    result = []
+    for c in docs:
+        seats = c.get("seats", 0)
+        enrolled = await course_enrolled_count(c["id"])
+        spots_left = max(seats - enrolled, 0)
+        if spots_left <= 0:
+            continue  # auto-hide full batches from the public listing
+        c["enrolled"] = enrolled
+        c["spots_left"] = spots_left
+        result.append(c)
+    return result
 
 
 # ---------------- Admin Course Routes ----------------
-@api_router.get("/admin/courses", response_model=List[Course])
+@api_router.get("/admin/courses")
 async def admin_list_courses(admin: dict = Depends(get_current_admin)):
     docs = await db.courses.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for c in docs:
+        seats = c.get("seats", 0)
+        enrolled = await course_enrolled_count(c["id"])
+        c["enrolled"] = enrolled
+        c["spots_left"] = max(seats - enrolled, 0)
+        c.setdefault("seats", 0)
     return docs
 
 
@@ -261,6 +368,9 @@ async def _validate_course(course_id: str):
     course = await db.courses.find_one({"id": course_id, "active": True}, {"_id": 0})
     if not course:
         raise HTTPException(status_code=400, detail="Selected course is not available")
+    enrolled = await course_enrolled_count(course_id)
+    if enrolled >= course.get("seats", 0):
+        raise HTTPException(status_code=400, detail="This batch is full. Please choose another course.")
     return course
 
 
@@ -323,6 +433,7 @@ async def verify_otp(body: VerifyOtpRequest):
         "course_id": body.course_id,
         "course_name": course["name"],
         "verified": True,
+        "status": "pending",
         "created_at": now_utc().isoformat(),
     }
     await db.enrolments.insert_one(enrolment)
@@ -335,40 +446,49 @@ async def verify_otp(body: VerifyOtpRequest):
 @api_router.get("/admin/enrolments")
 async def admin_enrolments(admin: dict = Depends(get_current_admin)):
     docs = await db.enrolments.find({"verified": True}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    for d in docs:
+        d.setdefault("status", "pending")
     return docs
+
+
+@api_router.post("/admin/enrolments/{enrolment_id}/accept")
+async def accept_enrolment(enrolment_id: str, admin: dict = Depends(get_current_admin)):
+    e = await db.enrolments.find_one({"id": enrolment_id}, {"_id": 0})
+    if not e:
+        raise HTTPException(status_code=404, detail="Enrolment not found")
+    if e.get("status") == "accepted":
+        return {"status": "accepted", "message": "Already confirmed"}
+    try:
+        await send_confirmation_email(e["email"], e["name"], e.get("course_name", "your course"))
+    except Exception as ex:
+        logger.error(f"Confirmation email failed: {ex}")
+        raise HTTPException(status_code=502, detail="Could not send confirmation email. Please try again.")
+    await db.enrolments.update_one(
+        {"id": enrolment_id},
+        {"$set": {"status": "accepted", "accepted_at": now_utc().isoformat()}},
+    )
+    return {"status": "accepted", "message": f"Confirmation email sent to {e['email']}"}
 
 
 # ---------------- Startup ----------------
 @app.on_event("startup")
 async def startup():
-    # Seed admin
-    existing = await db.admin_users.find_one({"email": ADMIN_EMAIL})
-    if existing is None:
-        await db.admin_users.insert_one({
-            "id": str(uuid.uuid4()),
-            "email": ADMIN_EMAIL,
-            "password_hash": hash_password(ADMIN_PASSWORD),
-            "name": "Fatima",
-            "created_at": now_utc().isoformat(),
-        })
-        logger.info("Admin user seeded")
-    elif not verify_password(ADMIN_PASSWORD, existing["password_hash"]):
-        await db.admin_users.update_one({"email": ADMIN_EMAIL}, {"$set": {"password_hash": hash_password(ADMIN_PASSWORD)}})
-        logger.info("Admin password updated")
-
     # Seed default courses if none exist
     count = await db.courses.count_documents({})
     if count == 0:
         defaults = [
-            Course(name="Beginner", start_date="2026-07-01",
+            Course(name="Beginner", start_date="2026-07-01", seats=30,
                    description="Start from the basics. Build everyday vocabulary, simple sentence patterns and the confidence to introduce yourself and hold short conversations in English."),
-            Course(name="Intermediate", start_date="2026-07-15",
+            Course(name="Intermediate", start_date="2026-07-15", seats=25,
                    description="Move from words to fluent sentences. Practice real-life conversations, improve grammar and pronunciation, and speak comfortably in group discussions."),
-            Course(name="Advanced", start_date="2026-08-01",
+            Course(name="Advanced", start_date="2026-08-01", seats=20,
                    description="Polish your fluency for interviews and the workplace. Master public speaking, debates, professional emails and confident, natural spoken English."),
         ]
         await db.courses.insert_many([c.model_dump() for c in defaults])
         logger.info("Default courses seeded")
+
+    # Backfill seats for any legacy course docs missing the field
+    await db.courses.update_many({"seats": {"$exists": False}}, {"$set": {"seats": 30}})
 
     await db.otp_codes.create_index("email", unique=True)
 

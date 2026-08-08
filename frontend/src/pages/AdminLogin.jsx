@@ -74,6 +74,10 @@ export default function AdminLogin() {
               {loading && <Loader2 className="animate-spin" size={18} />}
               Sign in
             </button>
+            <p className="text-center text-sm text-muted-foreground">
+              First time here?{" "}
+              <Link to="/admin/signup" data-testid="go-to-signup" className="font-semibold text-primary">Create admin account</Link>
+            </p>
           </form>
         </motion.div>
       </div>
