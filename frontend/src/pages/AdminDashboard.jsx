@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "../components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -312,6 +312,7 @@ export default function AdminDashboard() {
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="font-heading">{editing ? "Edit course" : "Add course"}</DialogTitle>
+            <DialogDescription>Set the course details shown on the public site.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
