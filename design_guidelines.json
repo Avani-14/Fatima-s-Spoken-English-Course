@@ -1,0 +1,101 @@
+{
+  "theme": "light",
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Figtree",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-semibold",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-gray-600"
+    },
+    "instructions": "Use Outfit for all headings. Never use Inter for headings. Use Figtree for body text. Ensure tight tracking for headings > 32px."
+  },
+  "colors": {
+    "archetype": "ORGANIC & EARTHY mixed with PASTEL & SOFT",
+    "palette": {
+      "background": "#FDFBF7",
+      "foreground": "#2D3047",
+      "primary": "#D96C4E",
+      "primary_hover": "#C85A40",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#F2CC8F",
+      "secondary_foreground": "#2D3047",
+      "muted": "#F3F0EA",
+      "muted_foreground": "#6B7280",
+      "border": "#E5E1D8",
+      "card": "#FFFFFF",
+      "card_foreground": "#2D3047",
+      "success": "#8A9A86",
+      "error": "#E07A5F"
+    },
+    "instructions": "Warm and approachable. No generic SaaS blue. Use Terracotta (primary) sparingly for CTAs and important actions. Background is a warm bone-white to reduce eye strain. Text is deep charcoal, never pure black."
+  },
+  "visual_enhancers": {
+    "surfaces": "Use 'Neumorphism (Tactile)' style for cards: Flat white background, 1px subtle border (border-[#E5E1D8]), soft ambient shadow (shadow-sm). On hover, slight lift (-translate-y-1) and slightly larger shadow (shadow-md).",
+    "borders": "Soft rounded corners (rounded-2xl for large cards, rounded-xl for inputs and buttons).",
+    "spacing": "Generous touch targets. p-6 or p-8 inside cards. gap-6 between grid items.",
+    "effects": "No full-screen gradients. Solid warm colors are preferred. Ensure the header has a background (solid or glassmorphism) so it never clashes with content."
+  },
+  "components": {
+    "buttons": "Pill-shaped (rounded-full) or large rounded-xl. Primary buttons must use the primary terracotta color. Add hover:scale-[1.02] active:scale-[0.98] transition-transform.",
+    "inputs": "Shadcn UI inputs customized: rounded-xl, bg-white, subtle border. Focus ring should be the primary color with ring-offset-background. Must have large enough height (h-12) for mobile touch targets.",
+    "cards": "Course listing cards must have clear visual hierarchy: Course Name (H3), Start Date (badge or small bold text), Description, and a full-width 'Enrol Now' button at the bottom.",
+    "forms": "Use single-column layout for forms since it is mobile-first. OTP input must use standard accessible multi-input with clear numeric keyboard trigger on mobile. Add a 'Resend OTP' button with a visual cooldown timer.",
+    "tables": "Admin dashboard table should be clean, responsive (scrollable horizontally on mobile) with striped rows or simple bottom borders."
+  },
+  "layouts": {
+    "global": "Mobile-first approach. Max-w-7xl mx-auto px-4 sm:px-6 lg:px-8.",
+    "hero": "Stack layout on mobile (Text + CTA -> Image). Image should have rounded corners and not exceed 60vh. Text left-aligned.",
+    "course_grid": "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6. Direct children only.",
+    "admin_dashboard": "Sidebar layout on desktop, hamburger menu with off-canvas sidebar on mobile."
+  },
+  "motion": {
+    "hover": "Hover states on all buttons and cards. transition-all duration-200 ease-in-out.",
+    "entrance": "Staggered fade-up for course cards using Framer Motion (initial={opacity: 0, y: 20} animate={opacity: 1, y: 0}).",
+    "form_feedback": "Use Sonner for success/error toasts after form submission or admin actions."
+  },
+  "accessibility": {
+    "contrast": "Ensure text over primary buttons has 4.5:1 contrast. Use APCA guidelines.",
+    "forms": "All inputs must have associated labels (sr-only if visually hidden, but preferred visible for mobile).",
+    "touch_targets": "Minimum 44x44px for all interactive elements (buttons, links, inputs).",
+    "testing": "All interactive and key informational elements MUST include data-testid attributes (e.g., data-testid='enrol-button', data-testid='otp-input', data-testid='course-card')."
+  },
+  "media": {
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwxfHxzdHVkZW50cyUyMGxlYXJuaW5nJTIwZW5nbGlzaCUyMGZyaWVuZGx5fGVufDB8fHx8MTc4NjIyNjE0NHww&ixlib=rb-4.1.0&q=85",
+        "category": "Hero Section",
+        "description": "Group of young adults learning together, friendly and collaborative atmosphere. Fits the 18-28 target demographic."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1758270704925-fa59d93119c1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwxfHxzcG9rZW4lMjBlbmdsaXNoJTIwY2xhc3MlMjB0ZWFjaGVyfGVufDB8fHx8MTc4NjIyNjE0NHww&ixlib=rb-4.1.0&q=85",
+        "category": "About/Instructor Section",
+        "description": "Teacher instructing a class, showing professionalism and active learning."
+      }
+    ],
+    "icons": "Use lucide-react for all icons. Ensure stroke-width is 1.5 or 2 for clarity."
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette. Do not use generic tailwind blues or grays. Use the defined warm tones.",
+    "Ensure the header has the business name 'Fatima's Spoken English Centre' as text. No logo image.",
+    "OTP verification must include a 'Resend' cooldown timer (e.g., 30s) to prevent spam.",
+    "Use Sonner for toast notifications (success/error).",
+    "Mobile experience is the priority. Forms must be single-column and easy to tap.",
+    "Do not add any 'AI slop' gradients. Stick to the solid warm background and terracotta accents.",
+    "Ensure the Admin dashboard is protected by login and provides a simple toggle for 'Course Active' status.",
+    "Make sure to implement the requested fonts (Outfit and Figtree) in your global css or index.html."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "You MUST NOT apply universal transition. Eg: transition: all. Always add transitions for specific interactive elements.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "All interactive elements MUST include data-testid attributes."
+  ]
+}
