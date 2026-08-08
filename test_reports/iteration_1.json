@@ -1,0 +1,27 @@
+{
+  "summary": "Full backend + frontend E2E testing for Fatima's Spoken English Centre. All 27 backend pytest tests pass (auth, public/admin course CRUD, admin route protection, enrolment validation, complete OTP flow including send/cooldown/wrong-code-reject/verify-creates-enrolment). Frontend flows verified: home course cards, course pre-selection on card Enrol Now click, form validation, OTP step visibility, 45s resend cooldown timer, wrong OTP rejection toast, Edit details returns to form, admin login->dashboard, Courses tab CRUD, Enrolments tab filter/sort, logout, protected route redirect.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AdminDashboard Dialogs", "issues": ["Radix DialogContent missing aria-describedby / Description (a11y warning in console). Non-blocking but should add DialogDescription."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": ["Optional: add <DialogDescription> to admin course add/edit and delete-confirm dialogs to remove Radix a11y console warnings."],
+  "critical_code_review_comments": [
+    "server.py uses deprecated FastAPI @app.on_event('startup'/'shutdown') — should migrate to lifespan context manager (FastAPI >=0.109 warns).",
+    "verify_otp does not delete otp_codes on max-attempts (5); the record stays until natural expiry — acceptable but slightly wasteful.",
+    "CORS uses allow_credentials=True with allow_origins that may default to '*' (from env). If CORS_ORIGINS env is '*', browsers will reject credentialed requests — currently frontend uses Bearer token, not cookies, so not blocking, but flag the config.",
+    "phone validator only checks length >=8 digits after stripping; no country code enforcement (spec said 'phone with country code'). Acceptable but weaker validation."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "100% (all critical flows)"},
+  "test_credentials": "admin@fatimaenglish.com / Fatima@2026",
+  "seed_data_creation": "Created + deleted TEST_ courses during CRUD tests. UI test accidentally deleted the 'Beginner' seed course (via .last selector) and left a TEST_UI_Course; both restored via API before finishing. DB is back to the 3 default courses.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "backend_test.py is comprehensive (auth, protection, CRUD, validation, full OTP flow reading code from mongo). To avoid deleting seeded courses via UI, use delete-course-{id} with the specific id of your test-created course rather than .last. All data-testids present as spec'd.",
+  "rca of the issue": "No blocking issues found."
+}
