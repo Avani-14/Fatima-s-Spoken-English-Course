@@ -2,26 +2,41 @@ Fatima's Spoken English Centre Website
 A simple, point-by-point guide to what this website does and how it works.
 
 1. What This Website Is For
+
    •	Lets visitors see Fatima's spoken-English courses and sign up online.
+
    •	Removes the need for Fatima to answer every enquiry call herself.
+
    •	Gives Fatima one private dashboard to manage courses and confirm students.
-3. Who Uses It
+2. Who Uses It
+
    •	Visitors — people browsing courses and filling the enrolment form (no login needed).
+
    •	Fatima (Admin) — the only person who can manage courses and view/confirm enrolments, through a private login.
-4. Public Website — What a Visitor Sees
+3. Public Website — What a Visitor Sees
+
    1.	Course Listing Page
-       •	Shows every active course: name, start date, and what's taught / what the student gets.
-       •	Shows seats left for each course (e.g. "5 spots left").
-       •	A course automatically disappears from the public list once it's full — no manual work needed from Fatima.
-2.	Enrolment Form
-       •	Visitor picks a course and fills in: Name, Gender, Age, Phone Number, Email.
-       •	Form won't accept blank or obviously fake details.
-       •	Visitor must verify their phone/email with an OTP before the form is accepted — this stops fake/spam entries.
-       •	Once verified, the enrolment is saved and a seat is provisionally counted against that course's limit.
-3.	Confirmation
+
+     	•	Shows every active course: name, start date, and what's taught / what the student gets.
+
+     	•	Shows seats left for each course (e.g. "5 spots left").
+
+     	•	A course automatically disappears from the public list once it's full — no manual work needed from Fatima.
+
+
+   2.	Enrolment Form
+
+      •	Visitor picks a course and fills in: Name, Gender, Age, Phone Number, Email.
+
+   	•	Form won't accept blank or obviously fake details.
+
+      •	Visitor must verify their phone/email with an OTP before the form is accepted — this stops fake/spam entries.
+
+      •	Once verified, the enrolment is saved and a seat is provisionally counted against that course's limit.
+5.	Confirmation
    •	After OTP verification, visitor sees a message like: "Thanks! Your spot is being reviewed — you'll get a confirmation email shortly."
    •	Visitor does not get told they have a confirmed seat yet — that only happens after Fatima accepts them (see below).
-4. Admin Side — What Fatima Sees
+6. Admin Side — What Fatima Sees
    1.	Admin Signup (one-time only)
       •	The very first time, Fatima creates her own admin account (email + password).
       •	After that, signup is closed — only login is available. No one else can create an admin account.
